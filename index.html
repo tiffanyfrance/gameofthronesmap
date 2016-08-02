@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>LeafletJS</title>
+  <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet/v0.7.7/leaflet.css" />
+  <script src="http://cdn.leafletjs.com/leaflet/v0.7.7/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.0/jquery.js"></script>
+
+  <style>
+    html, body {
+      height: 100%;
+      padding: 0;
+      margin: 0;
+    }
+    #mapid {
+      height: 100%;
+      background: #333;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="mapid"></div>
+
+  <script>
+    var map = L.map('mapid').setView([0,0], 3);
+
+    L.tileLayer('GOT/GOT/{z}/{x}/{y}.png', {
+      attribution: 'Game of Thrones',
+      maxZoom: 5,
+      minZoom: 1,
+      noWrap: true,
+      crs: L.CRS.Simple
+    }).addTo(map);
+
+  var southWest = map.unproject([200, 6700], map.getMaxZoom());
+  var northEast = map.unproject([8000, 1500], map.getMaxZoom());
+  map.setMaxBounds(new L.LatLngBounds(southWest, northEast));
+
+  map.on("click", function(e){
+    console.log(e.latlng);
+  });
+
+  var GotIcon = L.Icon.extend({
+    options: {
+      iconSize: [40, 40],
+      iconAnchor: [40, 40],
+      popupAnchor: [-20, -44]
+    }
+  });
+
+  $.getJSON('got.json', function(data) {
+
+
+    var overlay = {};
+
+    for (var i = 0; i < data.length; i++) {
+
+      var groupChars = [];
+
+      for (var j = 0; j < data[i].chars.length; j++) {
+
+        let character = data[i].chars[j];
+        let icon = new GotIcon({iconUrl: 'GOT/images/' + character.iconUrl});
+        let desc = $(character.description)[0];
+        let marker = L.marker(character.coords, {icon: icon}).bindPopup(desc);
+
+        groupChars.push(marker);
+
+        if (character.pathCoords) {
+          $(desc).find('.animateKhalessi').on('click', function() {
+            marker.closePopup();
+
+            let geojson = { type: 'LineString', coordinates: character.pathCoords };
+
+            let j = 0;
+            tick();
+            function tick() {
+              marker.setLatLng(L.latLng(
+                geojson.coordinates[j][0],
+                geojson.coordinates[j][1]));
+              if (++j < geojson.coordinates.length) setTimeout(tick, 100);
+            };
+          });
+        }
+      }
+
+      var layerGroup = L.layerGroup(groupChars);
+      map.addLayer(layerGroup);
+      overlay[data[i].layer] = layerGroup;
+    };
+
+    L.control.layers(null, overlay).addTo(map);
+  });
+
+  </script>
+
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
